@@ -36,19 +36,16 @@ Snowfall = ncread(netfile,var{3});
 X = single(ncread(netfile,var{4}));
 Y = single(ncread(netfile,var{5}));
 
+
 %% Locations of interest
 % These are the original locations from Dr. Jason Briner. I converted these
 % points to Decimal degrees by dividing the decimal minutes by 60. These
 % were then input into var [site]. From there I converted the site
 % locations from Lat/Long to Polar Stereographic North, which is the same
 % coordinate system used for the X,Y grid the base NetCDF is projected on
-% at 1 km resolution.  The transformed locations were rounded to the
-% nearest km to allow for a direct match of the XY data and to find the
-% index of those locations. A more robust alternative to is determine the
-% values for of the four adjacent grid cells for the location with using
-% ceil() and floor() rounding instead and then analyzing that data. Because
-% this is reanalysis model data, it problem wouldn't make much difference
-% at the northern latitudes. 
+% at 1 km resolution.  The transformed locations were then matched to
+% the nearest grid center by finding the XY location that minimized the
+% difference between the grid and the site locations. 
 
 % 78° 6.162’N  -70° 52.091'W
 % 78° 19.728'N  -70° 29.640'W
@@ -69,18 +66,32 @@ site = [78.1027 -70.68183
     76.9594 -25.4325];
 
 [x,y] = ll2psn(site(:,1),site(:,2));
-x = single(round(x,-3));
-y = single(round(y,-3));
+x = single(x);
+y = single(y);
+
+[~,xi] = min(abs(X-x'));    % find the matching indices
+[~,yi] = min(abs(Y-y'));
+
+xi = xi'; yi = yi';
 
 siteNum = (1:length(x))';
 
-xi = zeros(length(x),1);
-yi = zeros(length(y),1);
+% xi = zeros(length(x),1);
+% yi = zeros(length(y),1);
+% 
+% for i = 1:length(x)
+%     [Xtemp(i),xi(i)] = min(abs(X-x(i)));
+%     [Ytemp(i),yi(i)] = min(abs(Y-y(i)));
+% %     FirnT(i) = data(yi(i),xi(i));
+% end
+Xloc = X(xi);
+Yloc = Y(yi);
 
-for i = 1:length(x)
-    xi(i) = find(X==x(i));
-    yi(i) = find(Y==y(i));
-end
+
+%% Notes to fix and QC data
+% xi and yi need to be switched below, as they are referencing the WRONG
+% indeces. 
+
 
 %% Set Months
 % This selects the months of interest and returns the data to single format
@@ -110,14 +121,15 @@ AllData = [siteNum site data];
 
 %% Visualize the Data
 
-% figure(1)
-% imagesc(X,Y,SurfTemp')
-% colorbar
-% set(gca, 'YDir','normal');
-% hold on
-% scatter(x,y,'bo')
-% hold off
-% 
+figure(1)
+imagesc(X,Y,SurfTempCorr(:,:,4)')
+colorbar
+set(gca, 'YDir','normal');
+hold on
+scatter(x,y,'bo')
+scatter(Xloc,Yloc,'b*')
+hold off
+
 % figure(2)
 % imagesc(X,Y,SurfTempCorr')
 % colorbar
